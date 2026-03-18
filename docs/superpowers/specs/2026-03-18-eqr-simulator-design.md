@@ -273,7 +273,7 @@ Retry button (visible on agent error state):
    - Set `runStatus: 'running'` (to re-enable the synthesizing state and hide stale error banner)
    - Set `isSynthesizing: true`
    - POST /api/claude with `buildSynthesisPrompt(successfulResponses, snapshotLang)`
-   - On success: `setSynthesis(text)`, `setSynthesisError(null)`
+   - On success: atomically set `synthesis: text` and `synthesisError: null` (clears any prior synthesis error)
    - On failure: `setSynthesis(null)`, `setSynthesisError(errorMessage)`
    - Set `isSynthesizing: false`, `runStatus: 'done'`
    - **Upsert history:** if a history entry with the current run's `id` already exists, update it in place; otherwise, create a new entry. (Run was never saved if it originally ended as `runStatus: 'error'`.)
