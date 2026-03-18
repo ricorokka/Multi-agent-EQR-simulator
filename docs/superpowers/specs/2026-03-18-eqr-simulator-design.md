@@ -189,7 +189,7 @@ All 7 agents with their personas:
 - **short_seller**: "You are a forensic short seller. Focus on dilution risk, execution risk, balance sheet weaknesses, and red flags. Look for what the bulls are missing."
 - **analyst**: "You are a senior mining analyst covering critical minerals. You have deep knowledge of tungsten supply/demand dynamics, China export policy, and comparable companies (Almonty Industries, Wolf Minerals)."
 - **defense**: "You are a defense procurement strategist. You care about supply chain security and strategic stockpiling, not stock price. National security implications of non-Chinese tungsten supply are your primary concern."
-- **management**: "You represent EQR CEO Kevin Bradshaw. You are bullish but operationally grounded. Key metrics: at $700/mtu APT, EBITDA = A$150M; at $2,000/mtu, EBITDA ≈ A$370–400M → EV/EBITDA ~4–5x at current market cap."
+- **management**: "You represent EQR CEO Craig Bradshaw (appointed 1 Oct 2025). You are bullish but operationally grounded. Key metrics: market cap A$1.75B; APT ~$2,500/mtu currently (up +300% from Feb 2025). H1 FY2026 production 67,126 mtu. Targeted run-rate: >3,350 tpa. Iolanthe Vein (high-grade) access targeted Q3 FY2026. Traxys 5yr offtake ~A$678M at spot. Positive operating cashflow achieved Q2 FY2026. Financing fully resolved."
 - **macro**: "You are a global macro strategist. Think in terms of interest rates, recession risk, USD strength, black swan events, and liquidity crises. Remember: in crises, correlations go to 1."
 
 Each agent has equivalent Finnish system prompts in `lib/agents.ts`.
@@ -198,7 +198,7 @@ Each agent has equivalent Finnish system prompts in `lib/agents.ts`.
 
 ## EQR Background Context (`lib/context.ts`)
 
-**EN:** "EQ Resources (ASX:EQR) is an Australian tungsten producer operating two mines: Mt Carbine (Queensland) and Barruecopardo (Spain). Current APT price: ~$2,500/mtu (vs. $312/mtu in 2023). CEO guidance: at $700/mtu EBITDA = A$150M; at $2,000/mtu EBITDA ≈ A$370–400M → EV/EBITDA ~4–5x. Upcoming ASX All Ordinaries index inclusion. Financing resolved. Key competitor: Almonty Industries (higher market cap, not yet producing). China controls ~80% of global tungsten supply + has implemented export restrictions. US Project Vault: strategic tungsten stockpiling initiative."
+**EN:** "EQ Resources (ASX:EQR) is an Australian tungsten producer operating two mines: Mt Carbine (Queensland, Australia) and Barruecopardo (Spain). Market cap: A$1.75B (share price A$0.36, ~4.88B shares on issue). APT price: ~$2,500/mtu currently (was $1,320/mtu at Dec 2025; +300% from Feb 2025 lows). H1 FY2026 production: 67,126 mtu (Mt Carbine: 10,493 mtu; Barruecopardo: 56,633 mtu). Targeted production: >3,350 tpa (Mt Carbine >175,000 mtu/yr; Barruecopardo >160,000 mtu/yr). CEO: Craig Bradshaw (appointed 1 Oct 2025, previously Non-Executive Director). Financing resolved: A$56.5M raised, Traxys €15M prepayment facility (3yr), Oaktree loan converting to equity. Achieved positive operating cashflow Q2 FY2026: A$1.15M group level. Iolanthe Vein (high-grade, Mt Carbine) targeted for access Q3 FY2026 (~650,000t waste remaining). 5-year Traxys offtake: ~A$678M value at current spot prices. ASX All Ordinaries index inclusion effective 23 March 2026. Key competitor: Almonty Industries (higher market cap, not yet producing). China controls ~80% of global tungsten supply + has implemented export restrictions. US Project Vault: strategic tungsten stockpiling initiative."
 
 **FI:** Finnish equivalent stored alongside in `lib/context.ts`.
 
@@ -207,13 +207,13 @@ Each agent has equivalent Finnish system prompts in `lib/agents.ts`.
 ## Preset Scenarios (`lib/presets.ts`)
 
 **EN presets:**
-1. "China lifts all tungsten export restrictions. APT could drop significantly."
-2. "APT surges to $4,000/mtu due to geopolitical escalation."
-3. "Almonty announces 18+ month delays at Sangdong mine."
-4. "EQR cuts Mt Carbine production guidance by 40%."
-5. "US commits $5B to tungsten stockpiling, preferring non-Chinese sources."
-6. "Financial crisis: equities -40%, liquidity evaporates, correlations go to 1."
-7. "Severe recession: industrial demand collapses, commodities -30–50%."
+1. "China lifts all tungsten export restrictions. APT could drop significantly from current $2,500/mtu."
+2. "APT surges to $4,000/mtu due to further geopolitical escalation and supply tightness."
+3. "Almonty announces 18+ month delays at Sangdong mine, removing key future supply."
+4. "EQR delays Iolanthe Vein access by 12+ months due to unexpected ground conditions."
+5. "US Project Vault: government commits $5B to tungsten strategic stockpiling, preferring non-Chinese sources."
+6. "EQR achieves full targeted production run-rate of >3,350 tpa ahead of schedule."
+7. "Financial crisis: equities -40%, liquidity evaporates, correlations go to 1."
 
 **FI presets:** Finnish equivalents stored alongside.
 
