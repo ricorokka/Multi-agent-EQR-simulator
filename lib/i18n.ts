@@ -71,4 +71,4 @@ const UI = {
 } as const
 
 export type UIStrings = typeof UI.en
-export const t = (lang: Lang): typeof UI[Lang] => UI[lang]
+export const t = (lang: Lang): typeof UI[typeof lang] => UI[lang]
