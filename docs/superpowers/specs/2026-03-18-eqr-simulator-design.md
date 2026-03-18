@@ -269,7 +269,15 @@ Retry button (visible on agent error state):
 2. Creates a new AbortController scoped to this retry call only (independent of the run-level controller)
 3. Re-calls API for that agent only
 4. On response: `setAgentResponse(agentId, parsed)`, `setAgentLoading(agentId, false)`
-5. If all 7 agents now have responses where `error` is absent AND (`synthesis === null` OR `synthesisError !== null`): re-run synthesis
+5. Check aggregate state: if all 7 agents in `responses` now have `error === undefined` AND (`synthesis === null` OR `synthesisError !== null`):
+   - Set `runStatus: 'running'` (to re-enable the synthesizing state and hide stale error banner)
+   - Set `isSynthesizing: true`
+   - POST /api/claude with `buildSynthesisPrompt(successfulResponses, snapshotLang)`
+   - On success: `setSynthesis(text)`, `setSynthesisError(null)`
+   - On failure: `setSynthesis(null)`, `setSynthesisError(errorMessage)`
+   - Set `isSynthesizing: false`, `runStatus: 'done'`
+   - **Upsert history:** if a history entry with the current run's `id` already exists, update it in place; otherwise, create a new entry. (Run was never saved if it originally ended as `runStatus: 'error'`.)
+   - `snapshotLang` is the lang value captured at original run start; store it in a ref alongside the run-level AbortController ref.
 
 ### History persistence (`hooks/useHistory.ts`)
 
@@ -413,7 +421,7 @@ SCENARIO INPUT PANEL
   Textarea (scenario entry)
   Preset buttons row (7 presets)
   PDF upload zone → shows "Context: {filename}" when loaded
-  RUN button (disabled + loading state when runStatus === 'running')
+  RUN button (disabled when runStatus === 'running' OR replayRun !== null)
 ────────────────────────────────────────────────────
 AGENT GRID
   2-col desktop, 1-col mobile
@@ -453,7 +461,8 @@ shadcn `Sheet` (right side, 400px wide). Each `HistoryEntry`:
 **Replay mode** (`replayRun !== null`):
 - Page renders `replayRun.responses` and `replayRun.synthesis` instead of live store state
 - All inputs (textarea, preset buttons, file upload, Run button, lang toggle) are disabled
-- A "Back to live view" button calls `store.setReplayRun(null)` to exit replay mode
+- Run button is disabled while `replayRun !== null`; to start a new run the user must exit replay mode first
+- A "Back to live view" button calls `store.setReplayRun(null)` to exit replay mode and re-enable all inputs
 - Scenario textarea shows `replayRun.scenario` (read-only)
 
 ---
