@@ -40,7 +40,7 @@ export function FileUpload({ uploadedFile, onFile, disabled, strings }: FileUplo
       for (let i = 1; i <= pdf.numPages; i++) {
         const page = await pdf.getPage(i)
         const content = await page.getTextContent()
-        textParts.push(content.items.map((item: { str?: string }) => item.str ?? '').join(' '))
+        textParts.push(content.items.map((item) => ('str' in item ? item.str : '')).join(' '))
       }
       const fullText = textParts.join('\n')
       if (!fullText.trim()) {

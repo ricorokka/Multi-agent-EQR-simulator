@@ -60,7 +60,7 @@ export function PriceImpactChart({ responses, lang, strings }: PriceImpactChartP
           />
           <Tooltip
             contentStyle={{ background: '#0d0d14', border: '1px solid #1a1a28', borderRadius: 8, fontSize: 11 }}
-            formatter={(value: number, name: string) => [`${value > 0 ? '+' : ''}${value}%`, name === 'low' ? 'Low' : 'High']}
+            formatter={(value, name) => [`${Number(value) > 0 ? '+' : ''}${Number(value)}%`, name === 'low' ? 'Low' : 'High']}
             labelStyle={{ color: '#94a3b8' }}
           />
           <ReferenceLine x={0} stroke="#252535" />
