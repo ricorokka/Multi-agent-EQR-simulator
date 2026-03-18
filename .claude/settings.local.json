@@ -6,7 +6,8 @@
       "Bash(git commit:*)",
       "Bash(git config:*)",
       "Bash(npx:*)",
-      "Bash(npm install:*)"
+      "Bash(npm install:*)",
+      "Bash(/Users/ricorokka/eqr-simulator/.env.local:*)"
     ]
   }
 }
