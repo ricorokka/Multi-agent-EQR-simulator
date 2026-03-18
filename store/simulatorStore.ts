@@ -20,7 +20,7 @@ interface SimulatorState {
   setUploadedFile: (file: UploadedFile | null) => void
   setAgentResponse: (agentId: AgentId, response: AgentResponse) => void
   setAgentLoading: (agentId: AgentId, loading: boolean) => void
-  setSynthesis: (text: string) => void
+  setSynthesis: (text: string | null) => void
   setSynthesisError: (error: string | null) => void
   setIsSynthesizing: (v: boolean) => void
   setRunStatus: (status: RunStatus) => void
