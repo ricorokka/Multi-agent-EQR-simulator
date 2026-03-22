@@ -2,6 +2,7 @@
 import { AGENTS } from '@/lib/agents'
 import type { AgentId, AgentResponse, Lang } from '@/lib/types'
 import type { UIStrings } from '@/lib/i18n'
+import { Progress } from '@/components/ui/progress'
 
 interface ConfidenceGaugeProps {
   responses: Partial<Record<AgentId, AgentResponse>>
@@ -39,12 +40,11 @@ export function ConfidenceGauge({ responses, lang, strings }: ConfidenceGaugePro
               <span className="text-xs text-slate-400 w-32 shrink-0 truncate">
                 {agent.name[lang]}
               </span>
-              <div className="flex-1 h-1.5 rounded-full bg-[#1a1a28] overflow-hidden">
-                <div
-                  className="h-full rounded-full transition-all duration-700"
-                  style={{ width: `${confidence}%`, background: agent.color }}
-                />
-              </div>
+              <Progress
+                value={confidence}
+                className="flex-1 h-1.5 bg-[#1a1a28]"
+                indicatorStyle={{ background: agent.color }}
+              />
               <span className="font-mono text-[10px] text-slate-500 w-8 text-right shrink-0">
                 {confidence}%
               </span>

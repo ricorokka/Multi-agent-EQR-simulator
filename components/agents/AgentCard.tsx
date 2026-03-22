@@ -1,7 +1,7 @@
 // components/agents/AgentCard.tsx
 'use client'
 import { useState } from 'react'
-import type { Agent, AgentResponse } from '@/lib/types'
+import type { Agent, AgentResponse, Lang } from '@/lib/types'
 import type { UIStrings } from '@/lib/i18n'
 import { SentimentBadge } from './SentimentBadge'
 
@@ -9,11 +9,12 @@ interface AgentCardProps {
   agent: Agent
   response?: AgentResponse
   isLoading: boolean
+  lang: Lang
   strings: UIStrings
   onRetry: () => void
 }
 
-export function AgentCard({ agent, response, isLoading, strings, onRetry }: AgentCardProps) {
+export function AgentCard({ agent, response, isLoading, lang, strings, onRetry }: AgentCardProps) {
   const [expanded, setExpanded] = useState(false)
   const hasError = !!response?.error
   const isDone = !!response && !isLoading && !hasError
@@ -41,7 +42,7 @@ export function AgentCard({ agent, response, isLoading, strings, onRetry }: Agen
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
             <span className="font-mono text-xs font-bold" style={{ color: agent.color }}>
-              {agent.name.en}
+              {agent.name[lang]}
             </span>
             {isDone && <SentimentBadge sentiment={response.sentiment} />}
             {isDone && response.confidence !== null && (

@@ -2,8 +2,18 @@
 import { buildSystemPrompt, buildUserPrompt, buildSynthesisPrompt } from '@/lib/prompts'
 import { AGENTS } from '@/lib/agents'
 import type { AgentResponse } from '@/lib/types'
+import type { MarketData } from '@/lib/marketData'
 
 const institutional = AGENTS.find(a => a.id === 'institutional')!
+
+const mockMarketData: MarketData = {
+  sharePrice: 0.345,
+  marketCap: 1.68,
+  aptPrice: 2500,
+  audUsd: 0.63,
+  fetchedAt: '2026-03-22T08:00:00.000Z',
+  stale: false,
+}
 
 describe('buildSystemPrompt', () => {
   it('contains agent persona', () => {
@@ -16,11 +26,11 @@ describe('buildSystemPrompt', () => {
   })
   it('contains format instruction', () => {
     const prompt = buildSystemPrompt(institutional, 'en')
-    expect(prompt).toContain('Confidence: X%')
-    expect(prompt).toContain('Price impact:')
+    expect(prompt).toContain('Confidence: 72%')
+    expect(prompt).toContain('Price impact: -15% to +5%')
   })
   it('includes uploaded file content when provided', () => {
-    const prompt = buildSystemPrompt(institutional, 'en', { name: 'report.pdf', content: 'Key data here' })
+    const prompt = buildSystemPrompt(institutional, 'en', [{ name: 'report.pdf', content: 'Key data here' }])
     expect(prompt).toContain('report.pdf')
     expect(prompt).toContain('Key data here')
   })
@@ -31,6 +41,20 @@ describe('buildSystemPrompt', () => {
   it('uses Finnish when lang is fi', () => {
     const prompt = buildSystemPrompt(institutional, 'fi')
     expect(prompt).toContain('eläkerahasto')
+  })
+  it('injects live market data when provided', () => {
+    const prompt = buildSystemPrompt(institutional, 'en', undefined, mockMarketData)
+    expect(prompt).toContain('CURRENT MARKET DATA (fetched')
+    expect(prompt).toContain('A$0.345')
+    expect(prompt).toContain('$2,500/mtu')
+  })
+  it('injects Finnish market data section when lang is fi', () => {
+    const prompt = buildSystemPrompt(institutional, 'fi', undefined, mockMarketData)
+    expect(prompt).toContain('AJANKOHTAISET MARKKINATIEDOT')
+  })
+  it('omits market data section when not provided', () => {
+    const prompt = buildSystemPrompt(institutional, 'en')
+    expect(prompt).not.toContain('CURRENT MARKET DATA (fetched')
   })
 })
 

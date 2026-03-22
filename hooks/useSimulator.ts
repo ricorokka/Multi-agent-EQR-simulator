@@ -4,9 +4,10 @@ import { nanoid } from 'nanoid'
 import { AGENTS } from '@/lib/agents'
 import type { AgentId, AgentResponse, HistoryRun, Lang } from '@/lib/types'
 import { AGENT_IDS } from '@/lib/types'
-import { buildSystemPrompt, buildUserPrompt, buildSynthesisPrompt } from '@/lib/prompts'
+import { buildSystemPrompt, buildUserPrompt, buildSynthesisPrompt, buildDevilsAdvocatePrompt } from '@/lib/prompts'
 import { parseSentiment, parseConfidence, parsePriceImpact } from '@/lib/parse'
 import { useSimulatorStore } from '@/store/simulatorStore'
+import type { MarketData } from '@/lib/marketData'
 
 // NOTE: useHistory is NOT called here — useSimulator accepts a `save` callback
 // so the single useHistory() instance in page.tsx owns the runs state.
@@ -42,9 +43,14 @@ function parseResponse(text: string): AgentResponse {
   }
 }
 
-export function useSimulator(save: (run: HistoryRun) => void) {
+export function useSimulator(save: (run: HistoryRun) => void, marketData: MarketData | null) {
   const store = useSimulatorStore()
+  const marketDataRef = useRef<MarketData | null>(marketData)
+  marketDataRef.current = marketData
   const abortRef = useRef<AbortController | null>(null)
+  // Separate abort handle for retryAgent so startRun can cancel in-flight retries.
+  const retryAbortRef = useRef<AbortController | null>(null)
+  const synthRetryAbortRef = useRef<AbortController | null>(null)
   const runIdRef = useRef<string>('')
   const snapshotLangRef = useRef<Lang>('fi')
 
@@ -61,6 +67,7 @@ export function useSimulator(save: (run: HistoryRun) => void) {
     try {
       const text = await callClaude(system, user, signal)
       store.setSynthesis(text)
+      store.setSynthesisLang(lang)
       store.setSynthesisError(null)
       const run: HistoryRun = {
         schemaVersion: 1,
@@ -75,6 +82,7 @@ export function useSimulator(save: (run: HistoryRun) => void) {
     } catch (err: unknown) {
       if ((err as Error)?.name === 'AbortError') return
       store.setSynthesis(null)
+      store.setSynthesisLang(null)
       store.setSynthesisError((err as Error)?.message ?? 'Synthesis failed')
       const run: HistoryRun = {
         schemaVersion: 1,
@@ -93,8 +101,10 @@ export function useSimulator(save: (run: HistoryRun) => void) {
   }, [store, save])
 
   const startRun = useCallback(async () => {
-    // Abort any existing run
+    // Abort any existing run, retries, or synthesis retries
     abortRef.current?.abort()
+    retryAbortRef.current?.abort()
+    synthRetryAbortRef.current?.abort()
     const controller = new AbortController()
     abortRef.current = controller
     const signal = controller.signal
@@ -103,7 +113,7 @@ export function useSimulator(save: (run: HistoryRun) => void) {
     snapshotLangRef.current = lang
     const runId = nanoid()
     runIdRef.current = runId
-    const uploadedFile = store.uploadedFile
+    const uploadedFiles = store.uploadedFiles
 
     store.reset()
     store.setRunStatus('running')
@@ -119,7 +129,7 @@ export function useSimulator(save: (run: HistoryRun) => void) {
       const results = await Promise.allSettled(
         batch.map(async (agentId) => {
           const agent = AGENTS.find(a => a.id === agentId)!
-          const system = buildSystemPrompt(agent, lang, uploadedFile)
+          const system = buildSystemPrompt(agent, lang, uploadedFiles, marketDataRef.current)
           const user = buildUserPrompt(store.scenario, lang)
           const text = await callClaude(system, user, signal)
           return { agentId, text }
@@ -166,22 +176,27 @@ export function useSimulator(save: (run: HistoryRun) => void) {
   }, [store, runSynthesis])
 
   const retryAgent = useCallback(async (agentId: AgentId) => {
+    // Cancel any previous retry to prevent stale writes
+    retryAbortRef.current?.abort()
     const controller = new AbortController()
+    retryAbortRef.current = controller
     const signal = controller.signal
+
     const lang = snapshotLangRef.current
-    const uploadedFile = store.uploadedFile
+    const uploadedFiles = store.uploadedFiles
 
     store.setAgentResponse(agentId, { text: '', sentiment: 'NEUTRAL', confidence: null, priceImpact: null })
     store.setAgentLoading(agentId, true)
 
     try {
       const agent = AGENTS.find(a => a.id === agentId)!
-      const system = buildSystemPrompt(agent, lang, uploadedFile)
+      const system = buildSystemPrompt(agent, lang, uploadedFiles, marketDataRef.current)
       const user = buildUserPrompt(store.scenario, lang)
       const text = await callClaude(system, user, signal)
       const parsed = parseResponse(text)
       store.setAgentResponse(agentId, parsed)
     } catch (err: unknown) {
+      if ((err as Error)?.name === 'AbortError') return
       const errResponse: AgentResponse = {
         text: '',
         sentiment: 'NEUTRAL',
@@ -203,21 +218,75 @@ export function useSimulator(save: (run: HistoryRun) => void) {
     const needsSynthesis = store.synthesis === null || store.synthesisError !== null
 
     if (allDone && needsSynthesis) {
-      const retryController = new AbortController()
+      const synthController = new AbortController()
+      synthRetryAbortRef.current = synthController
       await runSynthesis(
         allResponses as Record<AgentId, AgentResponse>,
         lang,
         runIdRef.current,
-        retryController.signal,
+        synthController.signal,
         allResponses as Record<AgentId, AgentResponse>
       )
     }
   }, [store, runSynthesis])
 
+  // Retry synthesis independently (e.g. after a network failure).
+  // Uses current store.lang so switching language then retrying regenerates in the new language.
+  const retrySynthesis = useCallback(async () => {
+    const currentResponses = store.responses
+    const successful = Object.values(currentResponses).filter(r => r && !r.error)
+    if (successful.length === 0) return
+
+    synthRetryAbortRef.current?.abort()
+    const controller = new AbortController()
+    synthRetryAbortRef.current = controller
+    const signal = controller.signal
+
+    const lang = store.lang
+    store.setIsSynthesizing(true)
+    store.setSynthesisError(null)
+
+    try {
+      const { system, user } = buildSynthesisPrompt(currentResponses, lang)
+      const text = await callClaude(system, user, signal)
+      store.setSynthesis(text)
+      store.setSynthesisLang(lang)
+      store.setSynthesisError(null)
+    } catch (err: unknown) {
+      if ((err as Error)?.name === 'AbortError') return
+      store.setSynthesisError((err as Error)?.message ?? 'Synthesis failed')
+    } finally {
+      store.setIsSynthesizing(false)
+    }
+  }, [store])
+
+  const triggerDevilsAdvocate = useCallback(async (synthesisOverride?: string) => {
+    const synthesis = synthesisOverride ?? store.synthesis
+    if (!synthesis) return
+    const lang = snapshotLangRef.current
+    const controller = new AbortController()
+
+    store.setIsDevilingAdvocating(true)
+    store.setDevilsAdvocate(null)
+    store.setDevilsAdvocateError(null)
+    try {
+      const { system, user } = buildDevilsAdvocatePrompt(synthesis, lang)
+      const text = await callClaude(system, user, controller.signal)
+      store.setDevilsAdvocate(text)
+    } catch (err: unknown) {
+      if ((err as Error)?.name === 'AbortError') return
+      store.setDevilsAdvocateError((err as Error)?.message ?? 'Devil\'s advocate failed')
+    } finally {
+      store.setIsDevilingAdvocating(false)
+    }
+  }, [store])
+
   const cancel = useCallback(() => {
     abortRef.current?.abort()
+    retryAbortRef.current?.abort()
+    synthRetryAbortRef.current?.abort()
     store.reset()
   }, [store])
 
-  return { startRun, retryAgent, cancel }
+  return { startRun, retryAgent, cancel, triggerDevilsAdvocate, retrySynthesis }
 }
